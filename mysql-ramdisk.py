@@ -9,7 +9,7 @@ http://kotega.com/blog/2010/apr/12/mysql-ramdisk-osx/
 """
 
 import os
-
+import sys
 from optparse import OptionGroup, OptionParser 
 from subprocess import Popen, PIPE, call
 
@@ -20,9 +20,12 @@ RAMDISK_PATH = '/dev/disk1' # overide with -p option
 
 
 def main():
+    # TODO: maybe change RAMDISK_PATH from being a constant to *variable*?
     if is_linux():
         RAMDISK_PATH = '/mnt/ramdisk'
-
+    else:
+        RAMDISK_PATH = '/dev/disk1'       
+    
     parser = OptionParser()
     
     # Option group for killing ramdisk:
@@ -73,7 +76,9 @@ def main():
 
 def is_linux():
     " Return true if os type is linux, and false otherwise. "
-    return os.name == 'posix'
+    # TODO: will this work in Windows? idk, but OS 10.6.4 in mac
+    # is also posix, thus the need for the sys.platform check.
+    return os.name == 'posix' and sys.platform != 'darwin'
 
 def disable_apparmor():
     if is_linux():
