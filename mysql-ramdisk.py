@@ -37,7 +37,7 @@ def get_ramdisk_size():
 
 def _setup_kill_ramdisk_option_group(parser, ramdisk_path):
     # Option group for killing ramdisk:
-    group_kill_ramdisk = OptionGroup(parser, 'The death of a ramdisk',
+    group_kill_ramdisk = OptionGroup(parser, 'Options for killing a ramdisk:',
                                      'Short for `hdiutil detach /dev/disk1`'
                                      ' with some extra handling and default'
                                      ' location of %s.' % ramdisk_path) 
@@ -51,7 +51,7 @@ def _setup_kill_ramdisk_option_group(parser, ramdisk_path):
 
 def _setup_create_ramdisk_option_group(parser, ramdisk_path):
     # Option group for creating ramdisk (and maybe loading it up with mysql):
-    group_create_ramdisk = OptionGroup(parser, 'The birth of a ramdisk',
+    group_create_ramdisk = OptionGroup(parser, 'Options for creating a ramdisk:',
                                        'Creates a ramdisk, installs,'
                                        ' and starts MySQL')
     group_create_ramdisk.add_option('-c', '--create-ramdisk', 
