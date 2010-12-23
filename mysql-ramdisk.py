@@ -30,8 +30,10 @@ def get_ramdisk_path():
         return '/dev/disk1'
     return path
 
+
 def get_ramdisk_size():
     return getattr(settings, 'RAMDISK_SIZE', 256)
+
 
 def _setup_kill_ramdisk_option_group(parser, ramdisk_path):
     # Option group for killing ramdisk:
@@ -46,6 +48,7 @@ def _setup_kill_ramdisk_option_group(parser, ramdisk_path):
                                   dest='path_to_ramdisk')
     parser.add_option_group(group_kill_ramdisk)
 
+
 def _setup_create_ramdisk_option_group(parser, ramdisk_path):
     # Option group for creating ramdisk (and maybe loading it up with mysql):
     group_create_ramdisk = OptionGroup(parser, 'The birth of a ramdisk',
@@ -54,9 +57,12 @@ def _setup_create_ramdisk_option_group(parser, ramdisk_path):
     group_create_ramdisk.add_option('-c', '--create-ramdisk', 
                                     action='store_true', 
                                     dest='create_ramdisk')
-    group_create_ramdisk.add_option('-s', '--ramdisk-size', 
+    group_create_ramdisk.add_option('-s', 
+                                    '--ramdisk-size', 
                                     default=get_ramdisk_size(), 
-                                    type='int', dest='ramdisk_size')
+                                    help="Size should be specified in MB.",
+                                    type='int', 
+                                    dest='ramdisk_size')
     group_create_ramdisk.add_option('-a', '--disable-apparmor', 
                                     action='store_true', 
                                     dest='apparmor')
@@ -74,8 +80,10 @@ option_groups = {
                  'create': _setup_create_ramdisk_option_group
 }
 
+
 def setup_option_groups(parser, group_name):
     option_groups[group_name](parser, get_ramdisk_path())
+
 
 def main():
     
@@ -98,12 +106,15 @@ def main():
     elif options.kill_ramdisk:
         kill_ramdisk(options.path_to_ramdisk)
 
+
 def disable_apparmor():
     if is_linux():
         call(['sudo aa-complain mysqld'], shell=True)
 
+
 def calc_ramdisk_size(num_megabytes):
     return num_megabytes * 1048576 / 512 # MB * MiB/KB; 
+
 
 def create_ramdisk(ramdisk_size, disk_path=settings.RAMDISK_PATH):
     print 'Creating ramdisk...'
@@ -119,6 +130,7 @@ def create_ramdisk(ramdisk_size, disk_path=settings.RAMDISK_PATH):
         Popen('diskutil eraseVolume HFS+ ramdisk %s' % disk_path, stdout=PIPE,
               shell=True).communicate()
     print 'Done creating ramdisk: %s' % disk_path
+
 
 def kill_ramdisk(path_to_ramdisk):
     # TODO make sure that MySQL isn't running first!
@@ -137,6 +149,7 @@ def kill_ramdisk(path_to_ramdisk):
     else:
         print Popen(('hdiutil detach %s' % path_to_ramdisk), stdout=PIPE, 
                      shell=True).communicate()[0]
+
 
 def install_db(path_to_ramdisk=None):
     # TODO support other dbs?
