@@ -13,33 +13,40 @@ import sys
 from optparse import OptionGroup, OptionParser 
 from subprocess import Popen, PIPE, call
 
-
-# Overrideable defaults for ramdisk:
-RAMDISK_SIZE = 128 # default to 128 MB. override with -s option
-RAMDISK_PATH = '/dev/disk1' # overide with -p option 
+import settings
 
 
-def main():
-    # TODO: maybe change RAMDISK_PATH from being a constant to *variable*?
-    if is_linux():
-        RAMDISK_PATH = '/mnt/ramdisk'
-    else:
-        RAMDISK_PATH = '/dev/disk1'       
-    
-    parser = OptionParser()
-    
+def is_linux():
+    return os.name == 'posix' and sys.platform != 'darwin'
+
+
+def get_ramdisk_path():
+    # If no path has been specified in the settings file, then set the
+    # path based on the OS. 
+    path = getattr(settings, 'RAMDISK_PATH', None)
+    if path is None:
+        if is_linux():
+            return '/mnt/ramdisk'
+        return '/dev/disk1'
+    return path
+
+def get_ramdisk_size():
+    return getattr(settings, 'RAMDISK_SIZE', 256)
+
+def _setup_kill_ramdisk_option_group(parser, ramdisk_path):
     # Option group for killing ramdisk:
     group_kill_ramdisk = OptionGroup(parser, 'The death of a ramdisk',
                                      'Short for `hdiutil detach /dev/disk1`'
                                      ' with some extra handling and default'
-                                     ' location of %s.' % RAMDISK_PATH) 
+                                     ' location of %s.' % ramdisk_path) 
     group_kill_ramdisk.add_option('-k', '--kill-ramdisk', action='store_true', 
                                   dest='kill_ramdisk')
     group_kill_ramdisk.add_option('-p', '--path-to-ramdisk', type='string', 
-                                  default=RAMDISK_PATH,
+                                  default=ramdisk_path,
                                   dest='path_to_ramdisk')
     parser.add_option_group(group_kill_ramdisk)
-    
+
+def _setup_create_ramdisk_option_group(parser, ramdisk_path):
     # Option group for creating ramdisk (and maybe loading it up with mysql):
     group_create_ramdisk = OptionGroup(parser, 'The birth of a ramdisk',
                                        'Creates a ramdisk, installs,'
@@ -48,7 +55,7 @@ def main():
                                     action='store_true', 
                                     dest='create_ramdisk')
     group_create_ramdisk.add_option('-s', '--ramdisk-size', 
-                                    default=RAMDISK_SIZE, 
+                                    default=get_ramdisk_size(), 
                                     type='int', dest='ramdisk_size')
     group_create_ramdisk.add_option('-a', '--disable-apparmor', 
                                     action='store_true', 
@@ -60,6 +67,23 @@ def main():
                                     dest='with_mysql')
 
     parser.add_option_group(group_create_ramdisk)
+    
+
+option_groups = { 
+                 'kill': _setup_kill_ramdisk_option_group,
+                 'create': _setup_create_ramdisk_option_group
+}
+
+def setup_option_groups(parser, group_name):
+    option_groups[group_name](parser, get_ramdisk_path())
+
+def main():
+    
+    parser = OptionParser()
+    ramdisk_path = get_ramdisk_path()
+    setup_option_groups(parser, 'kill')
+    setup_option_groups(parser, 'create')
+
     
     (options, args) = parser.parse_args()
     
@@ -74,12 +98,6 @@ def main():
     elif options.kill_ramdisk:
         kill_ramdisk(options.path_to_ramdisk)
 
-def is_linux():
-    " Return true if os type is linux, and false otherwise. "
-    # TODO: will this work in Windows? idk, but OS 10.6.4 in mac
-    # is also posix, thus the need for the sys.platform check.
-    return os.name == 'posix' and sys.platform != 'darwin'
-
 def disable_apparmor():
     if is_linux():
         call(['sudo aa-complain mysqld'], shell=True)
@@ -87,8 +105,7 @@ def disable_apparmor():
 def calc_ramdisk_size(num_megabytes):
     return num_megabytes * 1048576 / 512 # MB * MiB/KB; 
 
-
-def create_ramdisk(ramdisk_size, disk_path=RAMDISK_PATH):
+def create_ramdisk(ramdisk_size, disk_path=settings.RAMDISK_PATH):
     print 'Creating ramdisk...'
     if is_linux():
         size_in_mb = ramdisk_size * 512 / 1048576
